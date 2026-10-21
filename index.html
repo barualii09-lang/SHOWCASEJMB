@@ -25,6 +25,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Dexie.js for Offline Local Storage -->
     <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <!-- SheetJS (xlsx) untuk Export Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
@@ -40,12 +42,14 @@
             body * { visibility: hidden; }
             #printable-receipt, #printable-receipt * { visibility: visible; }
             #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; }
+            #printable-report, #printable-report * { visibility: visible; }
+            #printable-report { position: absolute; left: 0; top: 0; width: 100%; background: white; z-index: 9999; padding: 20px; }
         }
     </style>
 </head>
 <body class="bg-app-custom font-sans antialiased text-gray-800 min-h-screen" x-data="appData()" x-init="initApp()">
 
-    <!-- SCREEN 1: LAYAR LOGIN PASSWORD -->
+    <!-- SCREEN 1: LOGIN PASSWORD -->
     <div x-show="!isLoggedIn" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
         <div class="bg-white/95 text-gray-800 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl border border-gray-200/80 space-y-5 text-center">
             
@@ -64,7 +68,6 @@
                         <input type="password" x-model="inputPassword" placeholder="Masukkan password..." required class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none pr-10">
                         <i class="fa-solid fa-key absolute right-3.5 top-3.5 text-gray-400"></i>
                     </div>
-                    <!-- KETERANGAN MINTA KE HERMAN -->
                     <p class="text-[11px] text-amber-600 mt-2 font-medium flex items-center gap-1.5">
                         <i class="fa-solid fa-circle-info"></i>
                         <span>Lupa password? Silakan tanya ke Herman.</span>
@@ -82,16 +85,14 @@
             </form>
 
             <div class="border-t border-gray-200 pt-3">
-                <p class="text-[10px] text-gray-400">Sistem Kasir & Showcase Digital Realtime V2.12</p>
+                <p class="text-[10px] text-gray-400">Sistem Kasir & Showcase Digital Realtime V2.14</p>
             </div>
         </div>
     </div>
 
-    <!-- SCREEN 2: APLIKASI UTAMA (SETELAH LOGIN) -->
+    <!-- SCREEN 2: APLIKASI UTAMA -->
     <div x-show="isLoggedIn" x-cloak>
-        <!-- Header Banner Image & Navigation -->
         <header class="sticky top-0 z-30 shadow-lg">
-            <!-- Banner Background Container -->
             <div class="relative bg-emerald-900 text-white overflow-hidden min-h-[110px] sm:min-h-[140px] flex items-center">
                 <img src="Jimmy Medika Borneo Café Counter (1).png" alt="RSIA JMB Header" class="absolute inset-0 w-full h-full object-cover object-center opacity-85">
                 <div class="absolute inset-0 bg-gradient-to-r from-black/60 via-emerald-950/40 to-transparent"></div>
@@ -108,13 +109,11 @@
                     </div>
 
                     <div class="flex items-center space-x-2 sm:space-x-3">
-                        <!-- STATUS KETERANGAN TERHUBUNG FIREBASE REALTIME -->
                         <span :class="firebaseConnected ? 'bg-emerald-600/90 text-white' : 'bg-amber-600/90 text-white'" class="px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border border-white/20 shadow flex items-center gap-1.5 transition">
                             <i :class="firebaseConnected ? 'fa-cloud text-yellow-300 animate-pulse' : 'fa-cloud-slash text-amber-200'" class="fa-solid text-sm"></i>
                             <span x-text="firebaseConnected ? 'Realtime Cloud Active' : 'Mode Lokal (Offline)'"></span>
                         </span>
 
-                        <!-- Tombol Panduan Netlify -->
                         <button @click="showNetlifyModal = true" class="p-2.5 bg-black/40 hover:bg-black/60 rounded-xl text-emerald-300 transition shadow backdrop-blur-sm border border-white/10 text-xs" title="Panduan Deploy Netlify">
                             <i class="fa-solid fa-rocket"></i>
                         </button>
@@ -122,7 +121,6 @@
                 </div>
             </div>
 
-            <!-- Navigation Tabs -->
             <div class="bg-emerald-950/90 backdrop-blur-md px-4 border-t border-emerald-700/40">
                 <div class="max-w-7xl mx-auto flex space-x-2 overflow-x-auto text-sm py-1.5">
                     <button @click="activeTab = 'kasir'" :class="activeTab === 'kasir' ? 'bg-gradient-to-r from-emerald-600 to-amber-500 text-white font-bold shadow-md' : 'text-emerald-100 hover:bg-emerald-800/50'" class="px-4 py-2 rounded-xl transition flex items-center space-x-2 whitespace-nowrap">
@@ -139,18 +137,16 @@
                     </button>
                     <button @click="activeTab = 'riwayat'" :class="activeTab === 'riwayat' ? 'bg-gradient-to-r from-emerald-600 to-amber-500 text-white font-bold shadow-md' : 'text-emerald-100 hover:bg-emerald-800/50'" class="px-4 py-2 rounded-xl transition flex items-center space-x-2 whitespace-nowrap">
                         <i class="fa-solid fa-receipt"></i>
-                        <span>Riwayat Transaksi</span>
+                        <span>Riwayat & Laporan</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- Main Application Container -->
         <main class="max-w-7xl mx-auto p-3 sm:p-5">
 
             <!-- TAB 1: KASIR (POS) -->
             <div x-show="activeTab === 'kasir'" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <!-- Product Grid -->
                 <div class="lg:col-span-2 space-y-4">
                     <div class="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-gray-200/80 flex flex-col sm:flex-row gap-3 justify-between items-center">
                         <div class="relative w-full sm:w-72">
@@ -170,7 +166,6 @@
                             <div class="bg-white/90 backdrop-blur-sm border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between group relative overflow-hidden">
                                 <span x-show="p.stok <= 0" class="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10">Habis</span>
                                 <div>
-                                    <!-- GAMBAR BISA DIKLIK UNTUK POPUP -->
                                     <div @click="openImagePreview(p)" class="h-28 sm:h-32 bg-gray-100 rounded-xl overflow-hidden mb-2 relative group-hover:opacity-90">
                                         <img :src="p.foto || 'https://via.placeholder.com/150?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                         <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold">
@@ -191,7 +186,6 @@
                     </div>
                 </div>
 
-                <!-- Cart Section dengan ID Target Scroll -->
                 <div id="keranjang-kasir-section" class="bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200/80 p-4 flex flex-col justify-between lg:h-[calc(100vh-140px)] lg:sticky lg:top-36 scroll-mt-36">
                     <div>
                         <div class="flex justify-between items-center pb-3 border-b border-gray-200">
@@ -242,7 +236,6 @@
                         <div class="space-y-1.5">
                             <div class="flex justify-between items-center">
                                 <label class="block text-xs text-gray-500">Nominal Tunai</label>
-                                <!-- TOMBOL UANG PAS -->
                                 <button @click="setUangPas()" :disabled="cartTotal <= 0" class="text-[11px] bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-lg font-bold transition shadow-sm disabled:opacity-50">
                                     <i class="fa-solid fa-bolt mr-1"></i> Uang Pas
                                 </button>
@@ -359,21 +352,50 @@
                 </div>
             </div>
 
-            <!-- TAB 4: RIWAYAT TRANSAKSI -->
+            <!-- TAB 4: RIWAYAT & LAPORAN RENTANG TANGGAL KUSTOM -->
             <div x-show="activeTab === 'riwayat'" class="space-y-4">
-                <div class="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-gray-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                        <h2 class="font-bold text-gray-800 text-base">Riwayat Transaksi RSIA JMB</h2>
-                        <p class="text-xs text-gray-500">Daftar rekapan penjualan kasir digital (Dilindungi Password).</p>
-                    </div>
-                    <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                        <div class="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-                            Total Pendapatan: <span x-text="formatRupiah(totalPendapatan)"></span>
+                <div class="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-gray-200/80 space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h2 class="font-bold text-gray-800 text-base">Riwayat Transaksi & Laporan Kustom</h2>
+                            <p class="text-xs text-gray-500">Atur tanggal mulai dan tanggal selesai untuk cetak PDF atau export Excel.</p>
                         </div>
-                        <button @click="authAction('clear-history', null)" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-semibold shadow flex items-center gap-1.5 transition" title="Hapus Semua Riwayat">
-                            <i class="fa-solid fa-trash-can"></i>
-                            <span>Hapus Riwayat</span>
-                        </button>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button @click="exportToExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-file-excel text-sm"></i>
+                                <span>Download Excel</span>
+                            </button>
+                            <button @click="printMonthlyReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-print text-sm"></i>
+                                <span>Cetak / PDF Laporan</span>
+                            </button>
+                            <button @click="authAction('clear-history', null)" class="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                                <span>Hapus Semua</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PENGATURAN RENTANG TANGGAL (DATE RANGE) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-100">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">Dari Tanggal</label>
+                            <input type="date" x-model="startDate" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs focus:ring-2 focus:ring-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">Sampai Tanggal</label>
+                            <input type="date" x-model="endDate" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2 text-xs focus:ring-2 focus:ring-amber-500">
+                        </div>
+                        <div class="flex items-end justify-between sm:justify-start gap-4 bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200">
+                            <div>
+                                <span class="block text-[10px] text-emerald-800 font-bold uppercase">Total Pendapatan Filter</span>
+                                <span class="text-sm font-black text-emerald-700" x-text="formatRupiah(filteredTotalPendapatan)"></span>
+                            </div>
+                            <div class="text-right sm:text-left">
+                                <span class="block text-[10px] text-gray-500 font-bold uppercase">Jumlah Transaksi</span>
+                                <span class="text-sm font-bold text-gray-700" x-text="filteredRiwayatList.length + ' Transaksi'"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -384,6 +406,7 @@
                                 <tr class="bg-gray-50/80 border-b border-gray-200 text-gray-600 text-xs uppercase font-semibold">
                                     <th class="p-3">ID</th>
                                     <th class="p-3">Tanggal</th>
+                                    <th class="p-3">Detail Item</th>
                                     <th class="p-3">Total Belanja</th>
                                     <th class="p-3">Bayar</th>
                                     <th class="p-3">Kembali</th>
@@ -391,10 +414,13 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
-                                <template x-for="t in riwayatList" :key="t.id">
+                                <template x-for="t in filteredRiwayatList" :key="t.id">
                                     <tr class="hover:bg-gray-50/50">
                                         <td class="p-3 font-mono text-xs text-gray-500" x-text="'#' + (t.id || t.firestoreId)"></td>
                                         <td class="p-3 text-xs text-gray-600" x-text="formatTanggal(t.waktu)"></td>
+                                        <td class="p-3 text-xs text-gray-600">
+                                            <span x-text="t.items ? t.items.map(i => i.nama + ' (' + i.qty + ')').join(', ') : '-'"></span>
+                                        </td>
                                         <td class="p-3 font-bold text-emerald-600" x-text="formatRupiah(t.total)"></td>
                                         <td class="p-3 text-xs text-gray-600" x-text="formatRupiah(t.bayar)"></td>
                                         <td class="p-3 text-xs text-gray-600" x-text="formatRupiah(t.kembali)"></td>
@@ -408,6 +434,11 @@
                                         </td>
                                     </tr>
                                 </template>
+                                <template x-if="filteredRiwayatList.length === 0">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-8 text-gray-400 text-xs">Tidak ada data transaksi pada rentang tanggal tersebut.</td>
+                                    </tr>
+                                </template>
                             </tbody>
                         </table>
                     </div>
@@ -417,15 +448,11 @@
         </main>
     </div>
 
-    <!-- FLOATING CART BUBBLE DI PINGGIR KIRI BAWAH (DENGAN FUNGSI SCROLL OTOMATIS) -->
+    <!-- FLOATING CART BUBBLE -->
     <div class="fixed left-4 bottom-6 z-40" x-show="isLoggedIn">
         <button @click="scrollToKeranjang()" class="relative group bg-gradient-to-r from-emerald-600 to-amber-500 hover:opacity-95 text-white p-3.5 sm:p-4 rounded-full shadow-2xl flex items-center justify-center transition transform hover:scale-105 border-2 border-white/40">
             <i class="fa-solid fa-cart-shopping text-xl sm:text-2xl"></i>
-            
-            <!-- BADGE JUMLAH BARANG DI KERANJANG -->
             <span class="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white animate-bounce" x-text="totalCartItems" x-show="totalCartItems > 0"></span>
-            
-            <!-- Tooltip Hover -->
             <span class="absolute left-full ml-3 bg-gray-900/90 text-white text-xs font-semibold px-3 py-1.5 rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition shadow-lg pointer-events-none backdrop-blur-sm">
                 Ke Keranjang Kasir (<span x-text="totalCartItems"></span> item)
             </span>
@@ -439,11 +466,9 @@
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
             <h3 class="font-black text-gray-800 text-base sm:text-lg pr-6 line-clamp-1" x-text="selectedImageProduct?.nama"></h3>
-            
             <div class="bg-gray-50 rounded-2xl overflow-hidden p-2 flex items-center justify-center max-h-80 sm:max-h-96">
                 <img :src="selectedImageProduct?.foto || 'https://via.placeholder.com/300?text=No+Image'" class="max-h-full max-w-full object-contain rounded-xl">
             </div>
-
             <div class="text-left space-y-1 bg-emerald-50/60 p-3 rounded-xl text-xs">
                 <div class="flex justify-between font-bold text-gray-700">
                     <span x-text="'Kategori: ' + (selectedImageProduct?.kategori || '-')"></span>
@@ -451,7 +476,6 @@
                 </div>
                 <p class="text-gray-500 text-[11px]" x-text="selectedImageProduct?.deskripsi || 'Tidak ada deskripsi'"></p>
             </div>
-
             <button @click="showImageModal = false" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition text-sm shadow">
                 CLOSE
             </button>
@@ -469,17 +493,13 @@
             
             <form @submit.prevent="verifyAuthPin()" class="space-y-3">
                 <input type="password" x-model="authPinInput" placeholder="Masukkan password..." required class="w-full text-center tracking-widest bg-gray-50 border border-gray-200 rounded-xl p-3 text-base font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                
-                <!-- KETERANGAN LUPA PASSWORD TANYA KE HERMAN -->
                 <p class="text-[11px] text-amber-600 font-medium flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-circle-info"></i>
                     <span>Lupa password? Silakan tanya ke Herman.</span>
                 </p>
-
                 <div x-show="authPinError" x-cloak class="text-red-500 text-xs font-medium">
                     Password Salah! Coba lagi.
                 </div>
-
                 <div class="grid grid-cols-2 gap-2 pt-1">
                     <button type="button" @click="showAuthModal = false; authPinInput = ''" class="py-2.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold">Batal</button>
                     <button type="submit" class="py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold shadow">Konfirmasi</button>
@@ -524,10 +544,8 @@
                     </div>
                 </div>
 
-                <!-- PHOTO SOURCE MODES -->
                 <div class="space-y-2 border-t border-gray-200 pt-3">
                     <label class="block text-xs font-semibold text-gray-600">Foto Produk</label>
-                    
                     <div class="flex space-x-1 sm:space-x-2 text-xs border-b border-gray-200 pb-2 overflow-x-auto">
                         <button type="button" @click="photoSource = 'file'; stopCamera()" :class="photoSource === 'file' ? 'bg-amber-100 text-amber-800 font-bold' : 'text-gray-500'" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition">
                             <i class="fa-solid fa-upload mr-1"></i> File Lokal
@@ -600,7 +618,7 @@
         </div>
     </div>
 
-    <!-- PRINT RECEIPT -->
+    <!-- PRINT RECEIPT (STRUK KASIR) -->
     <div id="printable-receipt" class="hidden print:block p-4 max-w-xs mx-auto text-black font-mono text-xs bg-white">
         <div class="text-center border-b pb-2 mb-2">
             <h2 class="font-bold text-sm">RSIA JMB</h2>
@@ -635,7 +653,44 @@
         </div>
     </div>
 
-    <!-- FIREBASE INITIALIZATION & APPLICATION CODE -->
+    <!-- PRINT REPORT (LAPORAN RENTANG TANGGAL UNTUK PDF/CETAK) -->
+    <div id="printable-report" class="hidden print:block text-black font-sans text-xs bg-white p-6">
+        <div class="text-center border-b-2 border-emerald-800 pb-3 mb-4">
+            <h1 class="text-lg font-black uppercase text-emerald-900">RSIA JIMMY MEDIKA BORNEO (RSIA JMB)</h1>
+            <p class="text-xs text-gray-600">Laporan Rekapan Transaksi Penjualan</p>
+            <p class="text-[11px] font-semibold text-amber-700 mt-1" x-text="'Periode: ' + (startDate || 'Awal') + ' s/d ' + (endDate || 'Hari Ini')"></p>
+        </div>
+        
+        <table class="w-full border-collapse border border-gray-300 text-xs mb-4">
+            <thead>
+                <tr class="bg-gray-100 text-gray-700">
+                    <th class="border border-gray-300 p-2">ID</th>
+                    <th class="border border-gray-300 p-2">Waktu Transaksi</th>
+                    <th class="border border-gray-300 p-2">Item Terjual</th>
+                    <th class="border border-gray-300 p-2 text-right">Total Belanja</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="t in filteredRiwayatList" :key="t.id">
+                    <tr>
+                        <td class="border border-gray-300 p-2 font-mono" x-text="'#' + (t.id || t.firestoreId)"></td>
+                        <td class="border border-gray-300 p-2" x-text="formatTanggal(t.waktu)"></td>
+                        <td class="border border-gray-300 p-2" x-text="t.items ? t.items.map(i => i.nama + ' (' + i.qty + ')').join(', ') : '-'"></td>
+                        <td class="border border-gray-300 p-2 text-right font-bold" x-text="formatRupiah(t.total)"></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div class="flex justify-end pt-2 border-t border-gray-300 text-sm">
+            <div class="text-right space-y-1">
+                <p><span class="font-semibold">Total Transaksi:</span> <span x-text="filteredRiwayatList.length"></span></p>
+                <p class="font-extrabold text-emerald-800"><span class="font-semibold">Total Pendapatan:</span> <span x-text="formatRupiah(filteredTotalPendapatan)"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE & SCRIPT UTAMA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -653,10 +708,8 @@
         try {
             const app = initializeApp(firebaseConfig);
             const dbCloud = getFirestore(app);
-
             window.dbCloud = dbCloud;
             window.cloudCollections = { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot };
-            
             window.dispatchEvent(new Event('firebase-ready'));
         } catch (error) {
             console.error("Firebase init failed:", error);
@@ -680,7 +733,6 @@
                 firebaseConnected: false,
                 showNetlifyModal: false,
                 
-                // VARIABLE MODAL GAMBAR PREVIEW
                 showImageModal: false,
                 selectedImageProduct: null,
 
@@ -692,7 +744,10 @@
                 diskon: 0,
                 bayar: 0,
                 
-                // AUTH PIN VARIABLES
+                // FILTER RENTANG TANGGAL KUSTOM
+                startDate: '',
+                endDate: '',
+
                 showAuthModal: false,
                 authPinInput: '',
                 authPinError: false,
@@ -722,19 +777,16 @@
                     await this.loadProduk();
                     await this.loadRiwayat();
 
-                    if (this.produkList.length === 0) {
-                        await this.resetSampleData();
-                    }
+                    // Set default tanggal hari ini di filter
+                    const today = new Date().toISOString().split('T')[0];
+                    this.endDate = today;
                 },
 
-                // FUNGSI UNTUK PINDAH KE TAB KASIR DAN AUTOSCROLL KE KERANJANG
                 scrollToKeranjang() {
                     this.activeTab = 'kasir';
                     this.$nextTick(() => {
                         const target = document.getElementById('keranjang-kasir-section');
-                        if (target) {
-                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
+                        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     });
                 },
 
@@ -762,7 +814,6 @@
                             for (let change of snapshot.docChanges()) {
                                 const data = change.doc.data();
                                 const fId = change.doc.id;
-
                                 if (change.type === "added" || change.type === "modified") {
                                     const exist = await db.produk.where('firestoreId').equals(fId).first();
                                     if (exist) {
@@ -781,20 +832,15 @@
                                 }
                             }
                             await this.loadProduk();
-                        }, (error) => {
-                            console.error("Firestore sync error:", error);
                         });
 
                         onSnapshot(collection(window.dbCloud, "transaksi"), async (snapshot) => {
                             for (let change of snapshot.docChanges()) {
                                 const data = change.doc.data();
                                 const fId = change.doc.id;
-
                                 if (change.type === "added") {
                                     const exist = await db.transaksi.where('firestoreId').equals(fId).first();
-                                    if (!exist) {
-                                        await db.transaksi.add({ ...data, firestoreId: fId });
-                                    }
+                                    if (!exist) await db.transaksi.add({ ...data, firestoreId: fId });
                                 } else if (change.type === "removed") {
                                     const exist = await db.transaksi.where('firestoreId').equals(fId).first();
                                     if (exist) await db.transaksi.delete(exist.id);
@@ -827,6 +873,64 @@
                     });
                 },
 
+                // FILTER RENTANG TANGGAL KUSTOM
+                get filteredRiwayatList() {
+                    return this.riwayatList.filter(t => {
+                        const tDate = t.waktu.split('T')[0]; // Ambil format YYYY-MM-DD
+                        
+                        let matchStart = true;
+                        let matchEnd = true;
+
+                        if (this.startDate) {
+                            matchStart = tDate >= this.startDate;
+                        }
+                        if (this.endDate) {
+                            matchEnd = tDate <= this.endDate;
+                        }
+
+                        return matchStart && matchEnd;
+                    });
+                },
+
+                get filteredTotalPendapatan() {
+                    return this.filteredRiwayatList.reduce((sum, t) => sum + t.total, 0);
+                },
+
+                // EXPORT KE EXCEL BERDASARKAN RENTANG TANGGAL
+                exportToExcel() {
+                    if (this.filteredRiwayatList.length === 0) {
+                        alert('Tidak ada data transaksi untuk diexport pada rentang tanggal ini.');
+                        return;
+                    }
+
+                    const dataExcel = this.filteredRiwayatList.map((t, idx) => ({
+                        No: idx + 1,
+                        'ID Transaksi': '#' + (t.id || t.firestoreId),
+                        'Waktu': this.formatTanggal(t.waktu),
+                        'Item Dibeli': t.items ? t.items.map(i => `${i.nama} (${i.qty}x)`).join(', ') : '-',
+                        'Subtotal': t.subtotal,
+                        'Diskon': t.diskon,
+                        'Total Belanja': t.total,
+                        'Tunai Bayar': t.bayar,
+                        'Kembalian': t.kembali
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(dataExcel);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Transaksi RSIA JMB");
+
+                    const fileName = `Laporan_RSIA_JMB_${this.startDate || 'Awal'}_sd_${this.endDate || 'Akhir'}.xlsx`;
+                    XLSX.writeFile(workbook, fileName);
+                },
+
+                printMonthlyReport() {
+                    if (this.filteredRiwayatList.length === 0) {
+                        alert('Tidak ada data transaksi pada rentang tanggal ini untuk dicetak.');
+                        return;
+                    }
+                    setTimeout(() => window.print(), 200);
+                },
+
                 get totalCartItems() {
                     return this.cart.reduce((sum, item) => sum + item.qty, 0);
                 },
@@ -843,11 +947,6 @@
                     return (this.bayar || 0) - this.cartTotal;
                 },
 
-                get totalPendapatan() {
-                    return this.riwayatList.reduce((sum, t) => sum + t.total, 0);
-                },
-
-                // FUNGSI TOMBOL UANG PAS
                 setUangPas() {
                     this.bayar = this.cartTotal;
                 },
@@ -952,21 +1051,14 @@
                         this.showAuthModal = false;
                         const action = this.pendingAction;
                         const target = this.pendingTarget;
-                        
                         this.pendingAction = null;
                         this.pendingTarget = null;
 
-                        if (action === 'add') {
-                            this.openModalProduk(null);
-                        } else if (action === 'edit') {
-                            this.openModalProduk(target);
-                        } else if (action === 'delete') {
-                            this.deleteProdukConfirmed(target.id);
-                        } else if (action === 'delete-history') {
-                            this.hapusSatuRiwayatConfirmed(target);
-                        } else if (action === 'clear-history') {
-                            this.hapusSemuaRiwayatConfirmed();
-                        }
+                        if (action === 'add') this.openModalProduk(null);
+                        else if (action === 'edit') this.openModalProduk(target);
+                        else if (action === 'delete') this.deleteProdukConfirmed(target.id);
+                        else if (action === 'delete-history') this.hapusSatuRiwayatConfirmed(target);
+                        else if (action === 'clear-history') this.hapusSemuaRiwayatConfirmed();
                     } else {
                         this.authPinError = true;
                     }
@@ -977,9 +1069,7 @@
                         const tx = await db.transaksi.get(id);
                         if (tx && tx.firestoreId && window.dbCloud) {
                             const { doc, deleteDoc } = window.cloudCollections;
-                            try {
-                                await deleteDoc(doc(window.dbCloud, "transaksi", tx.firestoreId));
-                            } catch (e) { console.error(e); }
+                            try { await deleteDoc(doc(window.dbCloud, "transaksi", tx.firestoreId)); } catch (e) {}
                         }
                         await db.transaksi.delete(id);
                         await this.loadRiwayat();
@@ -992,9 +1082,7 @@
                         for (let tx of allTx) {
                             if (tx.firestoreId && window.dbCloud) {
                                 const { doc, deleteDoc } = window.cloudCollections;
-                                try {
-                                    await deleteDoc(doc(window.dbCloud, "transaksi", tx.firestoreId));
-                                } catch (e) { console.error(e); }
+                                try { await deleteDoc(doc(window.dbCloud, "transaksi", tx.firestoreId)); } catch (e) {}
                             }
                         }
                         await db.transaksi.clear();
@@ -1003,11 +1091,8 @@
                 },
 
                 openModalProduk(produk = null) {
-                    if (produk) {
-                        this.formProduk = JSON.parse(JSON.stringify(produk));
-                    } else {
-                        this.formProduk = { id: null, nama: '', kategori: '', harga: 0, stok: 0, barcode: '', foto: '', deskripsi: '', firestoreId: null };
-                    }
+                    if (produk) this.formProduk = JSON.parse(JSON.stringify(produk));
+                    else this.formProduk = { id: null, nama: '', kategori: '', harga: 0, stok: 0, barcode: '', foto: '', deskripsi: '', firestoreId: null };
                     this.photoSource = 'file';
                     this.showModalProduk = true;
                 },
@@ -1021,9 +1106,7 @@
                     const file = e.target.files[0];
                     if (file) {
                         const reader = new FileReader();
-                        reader.onload = (event) => {
-                            this.formProduk.foto = event.target.result;
-                        };
+                        reader.onload = (event) => { this.formProduk.foto = event.target.result; };
                         reader.readAsDataURL(file);
                     }
                 },
@@ -1031,12 +1114,8 @@
                 async startCamera() {
                     try {
                         this.mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                        if (this.$refs.videoElem) {
-                            this.$refs.videoElem.srcObject = this.mediaStream;
-                        }
-                    } catch (err) {
-                        alert('Tidak dapat mengakses kamera: ' + err.message);
-                    }
+                        if (this.$refs.videoElem) this.$refs.videoElem.srcObject = this.mediaStream;
+                    } catch (err) { alert('Tidak dapat mengakses kamera: ' + err.message); }
                 },
 
                 captureCamera() {
@@ -1079,30 +1158,21 @@
                             if (this.formProduk.firestoreId) {
                                 dataToSave.firestoreId = this.formProduk.firestoreId;
                                 await updateDoc(doc(window.dbCloud, "produk", this.formProduk.firestoreId), dataToSave);
-                                if (this.formProduk.id) {
-                                    await db.produk.update(this.formProduk.id, dataToSave);
-                                }
+                                if (this.formProduk.id) await db.produk.update(this.formProduk.id, dataToSave);
                             } else {
                                 const docRef = await addDoc(collection(window.dbCloud, "produk"), dataToSave);
                                 dataToSave.firestoreId = docRef.id;
                                 const exist = await db.produk.where('firestoreId').equals(docRef.id).first();
-                                if (!exist) {
-                                    await db.produk.add(dataToSave);
-                                }
+                                if (!exist) await db.produk.add(dataToSave);
                             }
                         } else {
-                            if (this.formProduk.id) {
-                                await db.produk.update(this.formProduk.id, dataToSave);
-                            } else {
-                                await db.produk.add(dataToSave);
-                            }
+                            if (this.formProduk.id) await db.produk.update(this.formProduk.id, dataToSave);
+                            else await db.produk.add(dataToSave);
                         }
 
                         this.closeModalProduk();
                         await this.loadProduk();
-                    } catch (error) {
-                        alert('Gagal menyimpan produk: ' + error.message);
-                    }
+                    } catch (error) { alert('Gagal menyimpan produk: ' + error.message); }
                 },
 
                 async deleteProdukConfirmed(id) {
@@ -1110,11 +1180,8 @@
                         const prod = await db.produk.get(id);
                         if (prod && prod.firestoreId && window.dbCloud) {
                             const { doc, deleteDoc } = window.cloudCollections;
-                            try {
-                                await deleteDoc(doc(window.dbCloud, "produk", prod.firestoreId));
-                            } catch (e) { console.error(e); }
+                            try { await deleteDoc(doc(window.dbCloud, "produk", prod.firestoreId)); } catch (e) {}
                         }
-
                         await db.produk.delete(id);
                         await this.loadProduk();
                     }
