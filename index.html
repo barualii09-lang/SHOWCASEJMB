@@ -170,8 +170,8 @@
                             <div class="bg-white/90 backdrop-blur-sm border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between group relative overflow-hidden">
                                 <span x-show="p.stok <= 0" class="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10">Habis</span>
                                 <div>
-                                    <!-- GAMBAR BISA DIKLIK / DITAHAN UNTUK POPUP -->
-                                    <div @click.stop="openImagePreview(p)" class="h-28 sm:h-32 bg-gray-100 rounded-xl overflow-hidden mb-2 relative group-hover:opacity-90">
+                                    <!-- GAMBAR BISA DIKLIK UNTUK POPUP -->
+                                    <div @click="openImagePreview(p)" class="h-28 sm:h-32 bg-gray-100 rounded-xl overflow-hidden mb-2 relative group-hover:opacity-90">
                                         <img :src="p.foto || 'https://via.placeholder.com/150?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                         <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold">
                                             <i class="fa-solid fa-magnifying-glass-plus mr-1"></i> Perbesar
@@ -191,8 +191,8 @@
                     </div>
                 </div>
 
-                <!-- Cart Section -->
-                <div class="bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200/80 p-4 flex flex-col justify-between lg:h-[calc(100vh-140px)] lg:sticky lg:top-36">
+                <!-- Cart Section dengan ID Target Scroll -->
+                <div id="keranjang-kasir-section" class="bg-white/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200/80 p-4 flex flex-col justify-between lg:h-[calc(100vh-140px)] lg:sticky lg:top-36 scroll-mt-36">
                     <div>
                         <div class="flex justify-between items-center pb-3 border-b border-gray-200">
                             <h2 class="font-bold text-gray-800 flex items-center gap-2">
@@ -286,7 +286,6 @@
                     <template x-for="p in produkList" :key="p.id">
                         <div class="bg-white/90 backdrop-blur-sm rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-200/80 flex flex-col justify-between">
                             <div>
-                                <!-- KLIK/TAHAN GAMBAR UNTUK POPUP -->
                                 <div @click="openImagePreview(p)" class="h-36 sm:h-44 bg-gray-100 overflow-hidden relative cursor-pointer group">
                                     <img :src="p.foto || 'https://via.placeholder.com/300?text=No+Image'" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                     <span class="absolute top-2 left-2 bg-emerald-900/80 text-white text-[10px] px-2.5 py-0.5 rounded-full backdrop-blur-sm font-medium z-10" x-text="p.kategori"></span>
@@ -339,7 +338,7 @@
                                 <template x-for="p in produkList" :key="p.id">
                                     <tr class="hover:bg-gray-50/50">
                                         <td class="p-3">
-                                            <img @click="openImagePreview(p)" :src="p.foto || 'https://via.placeholder.com/50'" class="w-10 h-10 object-cover rounded-xl border cursor-pointer hover:opacity-80 transition" title="Klik untuk memperbesar">
+                                            <img @click="openImagePreview(p)" :src="p.foto || 'https://via.placeholder.com/50'" class="w-10 h-10 object-cover rounded-xl border cursor-pointer hover:opacity-85 transition" title="Klik untuk memperbesar">
                                         </td>
                                         <td class="p-3 font-mono text-xs text-gray-500" x-text="p.barcode || '-'"></td>
                                         <td class="p-3 font-semibold text-gray-800" x-text="p.nama"></td>
@@ -416,6 +415,21 @@
             </div>
 
         </main>
+    </div>
+
+    <!-- FLOATING CART BUBBLE DI PINGGIR KIRI BAWAH (DENGAN FUNGSI SCROLL OTOMATIS) -->
+    <div class="fixed left-4 bottom-6 z-40" x-show="isLoggedIn">
+        <button @click="scrollToKeranjang()" class="relative group bg-gradient-to-r from-emerald-600 to-amber-500 hover:opacity-95 text-white p-3.5 sm:p-4 rounded-full shadow-2xl flex items-center justify-center transition transform hover:scale-105 border-2 border-white/40">
+            <i class="fa-solid fa-cart-shopping text-xl sm:text-2xl"></i>
+            
+            <!-- BADGE JUMLAH BARANG DI KERANJANG -->
+            <span class="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md border-2 border-white animate-bounce" x-text="totalCartItems" x-show="totalCartItems > 0"></span>
+            
+            <!-- Tooltip Hover -->
+            <span class="absolute left-full ml-3 bg-gray-900/90 text-white text-xs font-semibold px-3 py-1.5 rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition shadow-lg pointer-events-none backdrop-blur-sm">
+                Ke Keranjang Kasir (<span x-text="totalCartItems"></span> item)
+            </span>
+        </button>
     </div>
 
     <!-- MODAL POPUP GAMBAR PROD / SHOWCASE -->
@@ -713,6 +727,17 @@
                     }
                 },
 
+                // FUNGSI UNTUK PINDAH KE TAB KASIR DAN AUTOSCROLL KE KERANJANG
+                scrollToKeranjang() {
+                    this.activeTab = 'kasir';
+                    this.$nextTick(() => {
+                        const target = document.getElementById('keranjang-kasir-section');
+                        if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    });
+                },
+
                 openImagePreview(produk) {
                     this.selectedImageProduct = produk;
                     this.showImageModal = true;
@@ -800,6 +825,10 @@
                                             (p.barcode && p.barcode.includes(this.searchKasir));
                         return matchCat && matchSearch;
                     });
+                },
+
+                get totalCartItems() {
+                    return this.cart.reduce((sum, item) => sum + item.qty, 0);
                 },
 
                 get cartSubtotal() {
